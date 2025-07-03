@@ -1,0 +1,18 @@
+[project]
+name = "doloris"
+version = "0.0.1"
+description = "Detection Of Learning Obstacles via Risk-aware Interaction Signals"
+authors = [
+    { name = "许睿林" },
+    { name = "傅小桐" }
+]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+]
+
+[project.scripts]
+doloris = "doloris.__main__:main"
+
+[tool.setuptools]
+packages = ["doloris"]
