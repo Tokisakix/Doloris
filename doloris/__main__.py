@@ -2,7 +2,7 @@ import os
 import sys
 import argparse
 
-VERSION = "0.0.1"
+VERSION = "0.1.0"
 DOLORIS = R"""  ____          _               _      
  |  _ \   ___  | |  ___   _ __ (_) ___ 
  | | | | / _ \ | | / _ \ | '__|| |/ __|
