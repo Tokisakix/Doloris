@@ -1,6 +1,6 @@
 [project]
 name = "doloris"
-version = "0.1.0"
+version = "0.2.0"
 description = "Detection Of Learning Obstacles via Risk-aware Interaction Signals"
 authors = [
     { name = "许睿林", email = "xurlin5@mail2.sysu.edu.cn" },
@@ -14,7 +14,8 @@ license-files = ["LICENSE"]
 requires-python = ">=3.8"
 dependencies = [
     "gradio",
-    "pandas"
+    "pandas",
+    "tqdm"
 ]
 
 [project.scripts]

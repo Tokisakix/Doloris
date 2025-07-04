@@ -1,12 +1,55 @@
+import os
+import zipfile
+import requests
+from io import BytesIO
+
 import gradio as gr
 import pandas as pd
+from tqdm import tqdm
+
+OULAD_DATA_URL = "https://blog.tokisakix.cn/static/OULAD-data.zip"
 
 class DolorisPanel:
-    def __init__(self):
+    def __init__(self, cache_path):
         self.classification_type = None
         self.num_weeks = None
         self.selected_subjects = None
         self.algorithm = None
+        self.cache_path = cache_path
+        self.data_root = os.path.join(self.cache_path, "OULAD-data")
+        self.__init_data()
+        return
+
+    def __init_data(self):
+        os.makedirs(self.cache_path, exist_ok=True)
+
+        if not os.path.exists(self.data_root) or not os.listdir(self.data_root):
+            print("数据集不存在，正在下载...")
+
+            try:
+                response = requests.get(OULAD_DATA_URL, stream=True)
+                response.raise_for_status()
+                total_size = int(response.headers.get('content-length', 0))
+                block_size = 1024  # 1 Kibibyte
+
+                temp_buffer = BytesIO()
+                with tqdm(total=total_size, unit='B', unit_scale=True, desc='下载中') as pbar:
+                    for data in response.iter_content(block_size):
+                        temp_buffer.write(data)
+                        pbar.update(len(data))
+
+                temp_buffer.seek(0)
+                with zipfile.ZipFile(temp_buffer) as z:
+                    z.extractall(self.data_root)
+
+                print("数据集下载并解压完成。")
+
+            except Exception as e:
+                print(f"下载或解压数据集失败: {e}")
+        else:
+            print("数据集已存在，跳过下载。")
+
+        return
 
     #TODO!
     def train_model(self, params):
@@ -15,6 +58,17 @@ class DolorisPanel:
         """
         print("\n[模型训练开始]")
         print("收到参数：", params)
+
+        # 数据集会自动下载，存放的路径如下
+        # for filename in os.listdir(self.data_root):
+        #     print(os.path.join(self.data_root, filename))
+        # ~\.doloris\OULAD-data\assessments.csv
+        # ~\.doloris\OULAD-data\courses.csv
+        # ~\.doloris\OULAD-data\studentAssessment.csv
+        # ~\.doloris\OULAD-data\studentInfo.csv
+        # ~\.doloris\OULAD-data\studentRegistration.csv
+        # ~\.doloris\OULAD-data\studentVle.csv
+        # ~\.doloris\OULAD-data\vle.csv
 
         # 模拟多次迭代的 loss
         loss_values = [1.0 / (i + 1) + 0.05 * (i % 3 - 1) for i in range(1, 21)]  # 模拟20轮loss
@@ -62,7 +116,7 @@ class DolorisPanel:
 
         return loss_values, metrics_df, "✅ 参数提交成功，模型训练完成"
 
-    def launch(self):
+    def launch(self, is_share):
         with gr.Blocks(title="Doloris 面板") as demo:
             gr.Markdown("## 🎛️ Doloris 参数配置面板")
 
@@ -119,4 +173,4 @@ class DolorisPanel:
                 outputs=[loss_plot, metrics_table, status_output]
             )
 
-        demo.launch()
+        demo.launch(share=is_share)

@@ -4,7 +4,7 @@ import argparse
 
 from doloris.panel import DolorisPanel
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 DOLORIS = R"""  ____          _               _      
  |  _ \   ___  | |  ___   _ __ (_) ___ 
  | | | | / _ \ | | / _ \ | '__|| |/ __|
@@ -26,8 +26,14 @@ def main():
     panel_parser.add_argument(
         "--cache-path",
         type=str,
-        default=os.path.expanduser("~/.doloris/"),
+        default=os.path.abspath(os.path.expanduser("~/.doloris/")),
         help="Path to the cached data directory"
+    )
+    panel_parser.add_argument(
+        "--share",
+        type=bool,
+        default=False,
+        help="Set 'True' to create a public link"
     )
 
     args = parser.parse_args()
@@ -37,8 +43,8 @@ def main():
     if args.command == "version":
         print(f"Doloris version {VERSION}")
     elif args.command == "panel":
-        panel = DolorisPanel()
-        panel.launch()
+        panel = DolorisPanel(args.cache_path)
+        panel.launch(args.share)
     else:
         parser.print_help()
         sys.exit(1)

@@ -7,3 +7,6 @@
 build/
 *.egg-info/
 dist/
+
+# gradio
+.gradio/
