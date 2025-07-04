@@ -15,7 +15,9 @@ requires-python = ">=3.8"
 dependencies = [
     "gradio",
     "pandas",
-    "tqdm"
+    "tqdm",
+    "scikit-learn",
+    "seaborn"
 ]
 
 [project.scripts]

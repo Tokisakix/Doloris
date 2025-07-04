@@ -1,0 +1,48 @@
+data_path: "Data/processed/cleaned_master_df.csv"
+label_type: "binary" #binary, multiclass
+
+feature_cols:
+  - age_band
+  - highest_education
+  - imd_band
+  - num_of_prev_attempts
+  - studied_credits
+  - total_n_days
+  - avg_total_sum_clicks
+  - n_days_oucontent
+  - avg_sum_clicks_quiz
+  - avg_sum_clicks_forumng
+  - avg_sum_clicks_homepage
+
+model_name: "sgd"  # logistic_regression, random_forest, knn, svm, sgd, mlp
+
+all_model_params:
+  logistic_regression:
+    C: 1.0
+    max_iter: 1000
+    solver: "lbfgs"
+  random_forest:
+    n_estimators: 100
+    max_depth: 10
+    random_state: 42
+  knn:
+    n_neighbors: 5
+  svm:
+    kernel: "rbf"
+    C: 1.0
+    max_iter: 1000
+  sgd:
+    loss: "squared_error"    # squared_error, hinge, log_loss
+    max_iter: 1000
+    tol: 0.001
+    random_state: 42
+  mlp:
+    hidden_layer_sizes: [100]
+    activation: "relu"
+    max_iter: 200
+    random_state: 42
+
+val_size: 0.1
+test_size: 0.2
+scale: true
+random_state: 42
