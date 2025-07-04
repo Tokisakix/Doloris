@@ -2,6 +2,8 @@ import os
 import sys
 import argparse
 
+from doloris.panel import DolorisPanel
+
 VERSION = "0.1.0"
 DOLORIS = R"""  ____          _               _      
  |  _ \   ___  | |  ___   _ __ (_) ___ 
@@ -9,9 +11,6 @@ DOLORIS = R"""  ____          _               _
  | |_| || (_) || || (_) || |   | |\__ \
  |____/  \___/ |_| \___/ |_|   |_||___/
 """
-
-def panel(cache_path: str):
-    raise NotImplementedError("别急，还没实现。")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -38,7 +37,8 @@ def main():
     if args.command == "version":
         print(f"Doloris version {VERSION}")
     elif args.command == "panel":
-        panel(args.cache_path)
+        panel = DolorisPanel()
+        panel.launch()
     else:
         parser.print_help()
         sys.exit(1)
