@@ -1,176 +1,171 @@
-import os
-import zipfile
-import requests
-from io import BytesIO
+import io
+from contextlib import redirect_stdout
 
 import gradio as gr
 import pandas as pd
-from tqdm import tqdm
 
-OULAD_DATA_URL = "https://blog.tokisakix.cn/static/.doloris.zip"
+from doloris.algorithm import run_doloris_algorithm
+
+ALGORITHM_NAME_MAPPING = {
+    "逻辑回归 (Logistic Regression)": "logistic_regression",
+    "朴素贝叶斯 (Naive Bayes)": "naive_bayes",
+    "支持向量机 (SVM)": "svm",
+    "k 近邻算法 (K-Nearest Neighbors)": "knn",
+    "随机梯度下降 (SGD)": "sgd",
+    "多层感知机 (MLP)": "mlp"
+}
+LABEL_TYPE_MAPPING = {
+    "二分类": "binary",
+    "多分类": "multiclass"
+}
 
 class DolorisPanel:
     def __init__(self, cache_path):
         self.classification_type = None
-        self.num_weeks = None
         self.selected_subjects = None
         self.algorithm = None
         self.cache_path = cache_path
         self.data_root = cache_path
-        self.__init_data()
-        return
 
-    def __init_data(self):
-        os.makedirs(self.cache_path, exist_ok=True)
+    def parse_metrics_report(self, report_dict, set_name):
+        df = pd.DataFrame(report_dict).T.reset_index()
+        df.rename(columns={"index": "类别"}, inplace=True)
+        df.insert(0, "数据集", set_name)
+        return df
 
-        if not os.path.exists(self.data_root) or not os.listdir(self.data_root):
-            print("数据集不存在，正在下载...")
-
-            try:
-                response = requests.get(OULAD_DATA_URL, stream=True)
-                response.raise_for_status()
-                total_size = int(response.headers.get('content-length', 0))
-                block_size = 1024  # 1 Kibibyte
-
-                temp_buffer = BytesIO()
-                with tqdm(total=total_size, unit='B', unit_scale=True, desc='下载中') as pbar:
-                    for data in response.iter_content(block_size):
-                        temp_buffer.write(data)
-                        pbar.update(len(data))
-
-                temp_buffer.seek(0)
-                with zipfile.ZipFile(temp_buffer) as z:
-                    z.extractall(self.data_root)
-
-                print("数据集下载并解压完成。")
-
-            except Exception as e:
-                print(f"下载或解压数据集失败: {e}")
-        else:
-            print("数据集已存在，跳过下载。")
-
-        return
-
-    #TODO!
     def train_model(self, params):
-        """
-        模拟训练过程，返回训练结果。
-        """
-        print("\n[模型训练开始]")
-        print("收到参数：", params)
+        log_buffer = io.StringIO()
+        with redirect_stdout(log_buffer):
+            print("\n[模型训练开始]")
+            print("收到训练参数：")
+            for k, v in params.items():
+                print(f"  - {k}: {v}")
 
-        # 数据集会自动下载，存放的路径如下
-        # for filename in os.listdir(self.data_root):
-        #     print(os.path.join(self.data_root, filename))
-        # ~\.doloris\OULAD-data\assessments.csv
-        # ~\.doloris\OULAD-data\courses.csv
-        # ~\.doloris\OULAD-data\studentAssessment.csv
-        # ~\.doloris\OULAD-data\studentInfo.csv
-        # ~\.doloris\OULAD-data\studentRegistration.csv
-        # ~\.doloris\OULAD-data\studentVle.csv
-        # ~\.doloris\OULAD-data\vle.csv
+            (confusion_matrix_path,
+             classification_path,
+             avg_scores_path,
+             val_metrics,
+             test_metrics
+            ) = run_doloris_algorithm(
+                self.cache_path,
+                params["label_type"],
+                params["feature_cols"],
+                params["model_name"]
+            )
 
-        # 模拟多次迭代的 loss
-        loss_values = [1.0 / (i + 1) + 0.05 * (i % 3 - 1) for i in range(1, 21)]  # 模拟20轮loss
+            print("\n[模型训练完成]")
+            print("验证集指标：")
+            for k, v in val_metrics.items():
+                print(f"  - {k}: {v}")
 
-        # 模拟性能指标
-        performance = {
-            "集合": ["Train", "Valid", "Test"],
-            "Accuracy": [0.92, 0.87, 0.85],
-            "F1-score": [0.90, 0.86, 0.84],
-        }
+            print("\n测试集指标：")
+            for k, v in test_metrics.items():
+                if k not in ["confusion_matrix", "report"]:
+                    print(f"  - {k}: {v}")
 
-        print("训练完成，结果如下：")
-        for k, v in performance.items():
-            print(f"{k}: {v}")
+        logs = log_buffer.getvalue()
 
-        loss_df = pd.DataFrame({
-            "step": list(range(1, len(loss_values)+1)),
-            "loss": loss_values
-        })
+        val_df = self.parse_metrics_report(val_metrics["report"], "验证集")
+        test_df = self.parse_metrics_report(test_metrics["report"], "测试集")
+        metrics_df = pd.concat([val_df, test_df], ignore_index=True)
 
-        return loss_df, pd.DataFrame(performance)
+        return metrics_df, confusion_matrix_path, classification_path, avg_scores_path, logs
 
-    def validate_and_submit(self, classification_type, num_weeks, selected_subjects, algorithm):
+    def validate_and_submit(self, classification_type, selected_subjects, algorithm_display_name):
         self.classification_type = classification_type
-        self.num_weeks = num_weeks
         self.selected_subjects = selected_subjects
-        self.algorithm = algorithm
-
-        # 参数校验
-        if not isinstance(num_weeks, int) or num_weeks <= 0 or num_weeks > 16:
-            return None, None, "❌ 使用周数应在 1 到 16 之间"
+        self.algorithm = algorithm_display_name
 
         if not selected_subjects:
-            return None, None, "❌ 请至少选择一门学科"
+            return None, None, None, None, None, "请至少选择一个特征用于训练"
 
-        # 构建参数并调用训练逻辑
+        # 映射为后端使用的原始参数
+        label_type_code = LABEL_TYPE_MAPPING.get(classification_type)
+        model_name_code = ALGORITHM_NAME_MAPPING.get(algorithm_display_name)
+
         params = {
-            "classification_type": self.classification_type,
-            "num_weeks": self.num_weeks,
-            "selected_subjects": self.selected_subjects,
-            "algorithm": self.algorithm,
+            "label_type": label_type_code,
+            "feature_cols": self.selected_subjects,
+            "model_name": model_name_code,
         }
 
-        loss_values, metrics_df = self.train_model(params)
+        metrics_df, conf_img_path, class_img_path, avg_img_path, logs = self.train_model(params)
 
-        return loss_values, metrics_df, "✅ 参数提交成功，模型训练完成"
+        return metrics_df, conf_img_path, class_img_path, avg_img_path, logs, "模型训练完成"
 
     def launch(self, is_share):
-        with gr.Blocks(title="Doloris 面板") as demo:
-            gr.Markdown("## 🎛️ Doloris 参数配置面板")
+        with gr.Blocks(title="Doloris 参数配置面板") as demo:
+            gr.Markdown("## Doloris 学业风险预测参数面板")
 
-            with gr.Row():
-                classification_type = gr.Radio(
-                    label="请选择分类类型",
-                    choices=["2 分类", "N 分类"],
-                    value="2 分类"
-                )
+            classification_type = gr.Radio(
+                label="请选择任务类型",
+                choices=list(LABEL_TYPE_MAPPING.keys()),
+                value="二分类",
+                info="选择二分类任务或多分类任务"
+            )
 
-                num_weeks = gr.Number(
-                    label="使用几周的数据（填 1~16）",
-                    value=4,
-                    precision=0,
-                    interactive=True
-                )
-
-            subject_choices = ["AAA", "BBB", "CCC", "DDD", "EEE", "FFF", "GGG"]
+            subject_choices = [
+                "age_band",
+                "highest_education",
+                "imd_band",
+                "num_of_prev_attempts",
+                "studied_credits",
+                "total_n_days",
+                "avg_total_sum_clicks",
+                "n_days_oucontent",
+                "avg_sum_clicks_quiz",
+                "avg_sum_clicks_forumng",
+                "avg_sum_clicks_homepage"
+            ]
             selected_subjects = gr.CheckboxGroup(
-                label="选择使用哪几科的数据",
-                choices=subject_choices
+                label="请选择用于训练的特征字段",
+                choices=subject_choices,
+                info="至少选择一个字段作为模型输入",
+                value=subject_choices,
             )
 
             algorithm = gr.Radio(
-                label="选择使用的算法",
-                choices=["线性分类器", "非线性分类器", "KNN", "逻辑回归", "随机森林", "SVM"],
-                value="线性分类器",
+                label="请选择训练算法",
+                choices=list(ALGORITHM_NAME_MAPPING.keys()),
+                value="逻辑回归 (Logistic Regression)",
+                info="支持的模型包括逻辑回归、朴素贝叶斯、支持向量机等"
             )
 
-            submit_btn = gr.Button("🚀 提交参数，开始训练")
+            submit_btn = gr.Button("开始训练模型")
 
-            status_output = gr.Textbox(label="运行状态", interactive=False)
+            status_output = gr.Textbox(label="训练状态", interactive=False)
 
-            # 图表和表格输出区
+            metrics_table = gr.Dataframe(
+                label="模型评估指标",
+                interactive=False,
+                wrap=True,
+                row_count=10,
+                col_count=(5, "dynamic")
+            )
+
             with gr.Row():
-                loss_plot = gr.LinePlot(
-                    label="📉 Loss 曲线图",
-                    x="step", y="loss",
-                    x_title="Step",
-                    y_title="Loss",
-                    width=500,
-                    height=350
-                )
+                conf_img = gr.Image(label="混淆矩阵图")
+                class_img = gr.Image(label="分类报告图")
+                avg_img = gr.Image(label="平均指标图")
 
-                metrics_table = gr.Dataframe(
-                    label="📊 模型性能指标",
-                    interactive=False,
-                )
+            logs_output = gr.Textbox(
+                label="训练过程日志",
+                lines=20,
+                interactive=False,
+                show_copy_button=True
+            )
 
-            # 提交按钮绑定
             submit_btn.click(
                 fn=self.validate_and_submit,
-                inputs=[classification_type, num_weeks, selected_subjects, algorithm],
-                outputs=[loss_plot, metrics_table, status_output]
+                inputs=[classification_type, selected_subjects, algorithm],
+                outputs=[
+                    metrics_table,
+                    conf_img,
+                    class_img,
+                    avg_img,
+                    logs_output,
+                    status_output
+                ]
             )
 
         demo.launch(share=is_share)

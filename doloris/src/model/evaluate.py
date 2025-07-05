@@ -13,7 +13,7 @@ def evaluate_model(model, X, y):
         "accuracy": accuracy_score(y, y_pred),
         "f1_score": f1_score(y, y_pred, average=average),
         "confusion_matrix": confusion_matrix(y, y_pred).tolist(),
-        "report": classification_report(y, y_pred, output_dict=True)
+        "report": classification_report(y, y_pred, output_dict=True, zero_division=0)
     }
     return metrics
 

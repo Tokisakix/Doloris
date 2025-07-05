@@ -1,9 +1,9 @@
 import os
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-import numpy as np
 from datetime import datetime
+
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 def _save_fig(title: str, save_dir):
@@ -12,6 +12,7 @@ def _save_fig(title: str, save_dir):
     filename = f"{title.lower().replace(' ', '_')}_{timestamp}.png"
     path = os.path.join(save_dir, filename)
     plt.savefig(path, dpi=300, bbox_inches="tight")
+    return path
 
 
 def plot_confusion_matrix(conf_matrix, class_names, title, plot_path):
@@ -22,8 +23,9 @@ def plot_confusion_matrix(conf_matrix, class_names, title, plot_path):
     plt.ylabel("Actual")
     plt.title(title)
     plt.tight_layout()
-    _save_fig("confusion_matrix", plot_path)
+    path = _save_fig("confusion_matrix", plot_path)
     plt.close()
+    return path
 
 
 def plot_classification_report(report_dict, title, plot_path):
@@ -41,8 +43,9 @@ def plot_classification_report(report_dict, title, plot_path):
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     plt.legend(loc='lower right')
     plt.tight_layout()
-    _save_fig("classification_report", plot_path)
+    path = _save_fig("classification_report", plot_path)
     plt.close()
+    return path
 
 
 def plot_avg_scores(report_dict, plot_path):
@@ -61,8 +64,9 @@ def plot_avg_scores(report_dict, plot_path):
     plt.ylabel("Score")
     plt.grid(axis="y", linestyle="--", alpha=0.6)
     plt.tight_layout()
-    _save_fig("macro_vs_weighted_avg", plot_path)
+    path = _save_fig("macro_vs_weighted_avg", plot_path)
     plt.close()
+    return path
 
 
 # def plot_loss_curve(loss_values, title="Training Loss Curve"):

@@ -1,6 +1,5 @@
 import random
 import numpy as np
-from tqdm import tqdm
 from collections import defaultdict, Counter
 from numba import njit
 
@@ -26,7 +25,7 @@ class LogisticRegression:
         self.weights = np.random.uniform(-1, 1, n_features)
         self.bias = 0.0
 
-        for epoch in tqdm(range(self.epochs)):
+        for epoch in range(self.epochs):
             for i in range(n_samples):
                 linear_output = np.dot(X[i], self.weights) + self.bias
                 pred = self.sigmoid(linear_output)
@@ -62,12 +61,10 @@ class KNNClassifier:
     def predict(self, X):
         X = np.asarray(X, dtype=np.float64)
 
-        # 计算平方距离矩阵
         X_norm = np.sum(X ** 2, axis=1).reshape(-1, 1)
         X_train_norm = np.sum(self.X_train ** 2, axis=1).reshape(1, -1)
         distances = X_norm + X_train_norm - 2 * X @ self.X_train.T
 
-        # 调用numba加速的预测函数
         return knn_predict_numba(distances, self.y_train, self.k)
 
 
@@ -165,7 +162,7 @@ class PerceptronClassifier:
         self.weights = np.zeros(n_features)
         self.bias = 0.0
 
-        for _ in tqdm(range(self.epochs)):
+        for _ in range(self.epochs):
             for i in range(n_samples):
                 linear_output = np.dot(X[i], self.weights) + self.bias
                 prediction = 1 if linear_output >= 0 else -1 
@@ -257,7 +254,7 @@ class MLPClassifier:
         n_samples, input_size = X.shape
         self._initialize_network(input_size)
 
-        for epoch in tqdm(range(self.epochs)):
+        for epoch in range(self.epochs):
             permutation = np.random.permutation(n_samples)
             X_shuffled = X[permutation]
             y_shuffled = y[permutation]
@@ -303,7 +300,7 @@ class SGDClassifierScratch:
         self.weights = np.random.uniform(-1, 1, n_features)
         self.bias = 0.0
 
-        for epoch in tqdm(range(self.epochs)):
+        for epoch in range(self.epochs):
             permutation = np.random.permutation(n_samples)
             X_shuffled = X[permutation]
             y_shuffled = y[permutation]
@@ -349,7 +346,7 @@ class SVC:
         self.weights = np.random.uniform(-0.01, 0.01, n_features)
         self.bias = 0.0
 
-        for epoch in tqdm(range(self.epochs)):
+        for epoch in range(self.epochs):
             permutation = np.random.permutation(n_samples)
             X_shuffled = X[permutation]
             y_shuffled = y_scaled[permutation]
