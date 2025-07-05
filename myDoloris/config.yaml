@@ -1,5 +1,6 @@
 data_path: "Data/processed/cleaned_master_df.csv"
 label_type: "binary" #binary, multiclass
+use_grid_search: False
 
 feature_cols:
   - age_band
@@ -14,33 +15,38 @@ feature_cols:
   - avg_sum_clicks_forumng
   - avg_sum_clicks_homepage
 
-model_name: "sgd"  # logistic_regression, random_forest, knn, svm, sgd, mlp
+model_name: "random_forest"  # logistic_regression, random_forest, knn, svm, sgd, mlp
 
 all_model_params:
   logistic_regression:
-    C: 1.0
-    max_iter: 1000
-    solver: "lbfgs"
+    lr: 0.1 
+    epochs: 100 
   random_forest:
     n_estimators: 100
-    max_depth: 10
-    random_state: 42
+    max_depth: 10 
+    min_samples_split: 2 
+    max_features: null 
+    random_state: 42 
   knn:
-    n_neighbors: 5
-  svm:
-    kernel: "rbf"
+    k: 2    
+  svm: 
+    lr: 0.001
+    epochs: 100 
     C: 1.0
-    max_iter: 1000
   sgd:
-    loss: "squared_error"    # squared_error, hinge, log_loss
-    max_iter: 1000
-    tol: 0.001
-    random_state: 42
-  mlp:
-    hidden_layer_sizes: [100]
-    activation: "relu"
-    max_iter: 200
-    random_state: 42
+    lr: 0.01
+    epochs: 100 
+  mlp: 
+    hidden_sizes: [100] 
+    output_size: 1
+    lr: 0.1
+    epochs: 100
+  perceptron:
+    epochs: 100
+    lr: 1.0 
+  decision_tree:
+    max_depth: 5
+    min_samples_split: 2
 
 val_size: 0.1
 test_size: 0.2

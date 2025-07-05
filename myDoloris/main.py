@@ -28,30 +28,46 @@ def main(config):
     elif config["label_type"] == "multiclass":
         df = define_label_multiclass(df)
         label_col = "label_multiclass"
+    else:
+        raise ValueError("config['label_type'] must be 'binary' or 'multiclass'")
+
 
     loader = DataLoader(
-            df=df,
-            feature_cols=config["feature_cols"],
-            label_col=label_col,
-            val_size=config["val_size"],
-            test_size=config["test_size"],
-            random_state=config["random_state"],
-            scale=config["scale"]
-        )
-    X_train, X_val, X_test, y_train, y_val, y_test = loader.load_data()
-    model_name = config["model_name"]
-    params = config["all_model_params"][model_name]
+        df=df,
+        feature_cols=config["feature_cols"],
+        label_col=label_col,
+        val_size=config["val_size"],
+        test_size=config["test_size"],
+        random_state=config["random_state"],
+        scale=config["scale"]
+    )
+    
+    X_train_df, X_val_df, X_test_df, y_train_series, y_val_series, y_test_series = loader.load_data()
+    X_train = X_train_df.values
+    y_train = y_train_series.values
 
+    X_val = X_val_df.values
+    y_val = y_val_series.values
+    
+    X_test = X_test_df.values
+    y_test = y_test_series.values
+
+
+    model_name = config["model_name"]
+    
+    if "all_model_params" in config and model_name in config["all_model_params"]:
+        params = config["all_model_params"][model_name]
     print(f"\nTraining model: {model_name}")
     
     start_time = time.time()
     model, val_metrics = train_model_with_val(
         model_name=model_name,
-        X_train=X_train,
+        X_train=X_train, 
         y_train=y_train,
-        X_val=X_val,
+        X_val=X_val, 
         y_val=y_val,
-        params=params
+        params=params,
+        use_grid_search=config.get("use_grid_search", False) # 假设配置中可能包含use_grid_search
     )
     end_time = time.time() 
     training_time = end_time - start_time
