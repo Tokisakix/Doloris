@@ -168,7 +168,7 @@ class DecisionTreeClassifier:
         if node.value is not None:
             return node.value
 
-        if node.feature >= len(x) or node.feature < 0:、
+        if node.feature >= len(x) or node.feature < 0:
             if len(self.y_train_fit) > 0:
                 return Counter(self.y_train_fit).most_common(1)[0][0]
             else:
