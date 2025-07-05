@@ -8,9 +8,11 @@
 
 **Doloris**（**D**etection **O**f **L**earning **O**bstacles via **R**isk-aware **I**nteraction **S**ignals）是一款用于基于交互信号分析学习障碍的检测系统。它支持用户友好的命令行界面、可视化面板以及灵活的机器学习模型配置，适用于教育行为数据分析与预测任务。
 
-![img](./assets/panel_1.png)
+在线演示 Demo 链接 [https://doloris.tokisakix.cn/](https://doloris.tokisakix.cn/)
 
-![img](./assets/panel_2.png)
+![img](https://raw.githubusercontent.com/Tokisakix/Doloris/refs/heads/main/assets/panel_1.png)
+
+![img](https://raw.githubusercontent.com/Tokisakix/Doloris/refs/heads/main/assets/panel_2.png)
 
 ## 🔧 安装方式
 
@@ -140,15 +142,16 @@ $$
 
 同时计算宏平均（Macro Average）与加权平均（Weighted Average）：
 
-* 宏平均（Macro）为各类 F1-score 的算术平均：
+**宏平均（Macro）** 为各类 F1-score 的算术平均：
 
-  $$
-  \text{Macro-F1} = \frac{1}{C} \sum_{c=1}^{C} \text{F1}_c
-  $$
-* 加权平均（Weighted）根据每类样本数量加权：
+$$
+\text{Macro-F1} = \frac{1}{C} \sum_{c=1}^{C} \text{F1}_c
+$$
+  
+**加权平均（Weighted）** 根据每类样本数量加权：
 
-  $$
-  \text{Weighted-F1} = \frac{1}{N} \sum_{c=1}^{C} n_c \cdot \text{F1}_c
-  $$
+$$
+\text{Weighted-F1} = \frac{1}{N} \sum_{c=1}^{C} n_c \cdot \text{F1}_c
+$$
 
 其中 $n_c$ 表示第 $c$ 类样本数，$N$ 为总样本数。
