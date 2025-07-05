@@ -73,7 +73,7 @@ def argument_parser():
     algorithm_parser.add_argument(
         "--model-name",
         type=str,
-        choices=["logistic_regression", "random_forest", "knn", "svm", "sgd", "mlp"],
+        choices=["logistic_regression", "naive_bayes", "knn", "svm", "sgd", "mlp"],
         default="logistic_regression",
         help="Name of the model to use"
     )

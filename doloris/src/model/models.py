@@ -1,7 +1,8 @@
 import random
 import numpy as np
 from tqdm import tqdm
-from collections import Counter
+from collections import defaultdict, Counter
+from numba import njit
 
 class LogisticRegression:
     def __init__(self, lr=0.1, epochs=100):
@@ -47,9 +48,8 @@ class LogisticRegression:
         probabilities = self.predict_proba(X)
         return (probabilities >= 0.5).astype(int)
 
-
 class KNNClassifier:
-    def __init__(self, k=2):
+    def __init__(self, k=4):
         self.k = k
         self.X_train = None
         self.y_train = None
@@ -59,242 +59,95 @@ class KNNClassifier:
         self.y_train = np.asarray(y, dtype=np.int32)
         return self
 
-    def _euclidean_distance(self, x1, x2):
-        return np.sqrt(np.sum((x1 - x2) ** 2))
-
-    def _predict_one(self, x): 
-        distances = [self._euclidean_distance(x, x_train) for x_train in self.X_train]
-        k_indices = np.argsort(distances)[:self.k]
-        k_nearest_labels = [self.y_train[i] for i in k_indices]
-        most_common = Counter(k_nearest_labels).most_common(1)
-        return most_common[0][0]
-
-    def predict(self, X): 
+    def predict(self, X):
         X = np.asarray(X, dtype=np.float64)
-        return np.array([self._predict_one(x) for x in X])
 
-class DecisionTreeNode:
-    def __init__(self, feature=None, threshold=None, left=None, right=None, value=None):
-        self.feature = feature  
-        self.threshold = threshold 
-        self.left = left
-        self.right = right 
-        self.value = value 
+        # 计算平方距离矩阵
+        X_norm = np.sum(X ** 2, axis=1).reshape(-1, 1)
+        X_train_norm = np.sum(self.X_train ** 2, axis=1).reshape(1, -1)
+        distances = X_norm + X_train_norm - 2 * X @ self.X_train.T
 
-class DecisionTreeClassifier:
-    def __init__(self, max_depth=5, min_samples_split=2):
-        self.max_depth = max_depth
-        self.min_samples_split = min_samples_split
-        self.root = None
-        self.y_train_fit = np.array([]) 
+        # 调用numba加速的预测函数
+        return knn_predict_numba(distances, self.y_train, self.k)
 
-    def _entropy(self, labels):
-        total = len(labels)
-        if total == 0:
-            return 0
-        counts = Counter(labels)
-        entropy = 0.0
-        for count in counts.values():
-            prob = count / total
-            entropy -= prob * np.log2(prob + 1e-9)
-        return entropy
 
-    def _best_split(self, X, y):
-        best_gain = -1.0
-        best_feature = None
-        best_threshold = None
+@njit
+def knn_predict_numba(distances, y_train, k):
+    n_test = distances.shape[0]
+    preds = np.empty(n_test, dtype=np.int32)
 
-        n_samples, n_features = X.shape
-        base_entropy = self._entropy(y)
+    max_label = np.max(y_train)
+    for i in range(n_test):
+        row = distances[i]
+        idx = np.argpartition(row, k)[:k]
 
-        for feature in range(n_features):
-            unique_values = np.unique(X[:, feature])
-            if len(unique_values) < 2:
-                continue 
+        votes = np.zeros(max_label + 1, dtype=np.int32)
+        for j in idx:
+            votes[y_train[j]] += 1
 
-            for i in range(len(unique_values) - 1):
-                threshold = (unique_values[i] + unique_values[i+1]) / 2.0
+        preds[i] = np.argmax(votes)
 
-                left_indices = X[:, feature] <= threshold
-                right_indices = X[:, feature] > threshold
+    return preds
 
-                left_y, right_y = y[left_indices], y[right_indices]
-
-                if len(left_y) == 0 or len(right_y) == 0:
-                    continue
-
-                gain = base_entropy - (
-                    (len(left_y) / n_samples) * self._entropy(left_y) +
-                    (len(right_y) / n_samples) * self._entropy(right_y)
-                )
-
-                if gain > best_gain:
-                    best_gain = gain
-                    best_feature = feature
-                    best_threshold = threshold
-        return best_feature, best_threshold, best_gain
-
-    def _build_tree(self, X, y, depth):
-        if len(np.unique(y)) == 1: 
-            return DecisionTreeNode(value=y[0])
-        if depth >= self.max_depth: 
-            return DecisionTreeNode(value=Counter(y).most_common(1)[0][0])
-        if len(X) < self.min_samples_split: 
-            return DecisionTreeNode(value=Counter(y).most_common(1)[0][0])
-        
-        feature, threshold, gain = self._best_split(X, y)
-        if feature is None or gain <= 0:
-            return DecisionTreeNode(value=Counter(y).most_common(1)[0][0])
-
-        left_indices = X[:, feature] <= threshold
-        right_indices = X[:, feature] > threshold
-
-        left_node = self._build_tree(X[left_indices], y[left_indices], depth + 1)
-        right_node = self._build_tree(X[right_indices], y[right_indices], depth + 1)
-
-        return DecisionTreeNode(feature, threshold, left_node, right_node)
+class NaiveBayesClassifier:
+    def __init__(self, var_smoothing=1e-9, normalize=False, clip_log_prob=None, priors=None):
+        self.var_smoothing = var_smoothing
+        self.normalize = normalize
+        self.clip_log_prob = clip_log_prob
+        self.priors = priors
+        self.class_priors = {}
+        self.feature_likelihoods = defaultdict(dict)
+        self.classes = []
+        self.feature_mean = None
+        self.feature_std = None
 
     def fit(self, X, y):
         X = np.asarray(X, dtype=np.float64)
-        y = np.asarray(y, dtype=np.int32)
-        self.y_train_fit = y 
-        self.root = self._build_tree(X, y, 0)
-        return self
+        y = np.asarray(y)
+        n_samples, n_features = X.shape
+        self.classes = np.unique(y)
 
-    def _predict_one(self, x, node=None): 
-        if node is None:
-            node = self.root
-        
-        if node.value is not None:
-            return node.value
+        if self.normalize:
+            self.feature_mean = X.mean(axis=0)
+            self.feature_std = X.std(axis=0) + 1e-9
+            X = (X - self.feature_mean) / self.feature_std
 
-        if node.feature >= len(x) or node.feature < 0:
-            if len(self.y_train_fit) > 0:
-                return Counter(self.y_train_fit).most_common(1)[0][0]
-            else:
-                return 0
-        
-        if x[node.feature] <= node.threshold:
-            if node.left:
-                return self._predict_one(x, node.left)
-            else:
-                if len(self.y_train_fit) > 0:
-                    return Counter(self.y_train_fit).most_common(1)[0][0]
-                else:
-                    return 0
+        if self.priors is not None:
+            self.class_priors = {c: p for c, p in zip(self.classes, self.priors)}
         else:
-            if node.right:
-                return self._predict_one(x, node.right)
-            else:
-                if len(self.y_train_fit) > 0:
-                    return Counter(self.y_train_fit).most_common(1)[0][0]
-                else:
-                    return 0
-    
-    def predict(self, X): # 预测
-        X = np.asarray(X, dtype=np.float64)
-        return np.array([self._predict_one(x) for x in X])
+            for c in self.classes:
+                self.class_priors[c] = np.mean(y == c)
 
-class RandomTreeClassifier: 
-    def __init__(self, n_estimators=100, max_depth=10, min_samples_split=2, max_features=None, random_state=None):
-        self.n_estimators = n_estimators
-        self.max_depth = max_depth
-        self.min_samples_split = min_samples_split
-        self.max_features = max_features
-        self.random_state = random_state
-        self.trees = []
-
-    def fit(self, X, y):
-        X = np.asarray(X, dtype=np.float64)
-        y = np.asarray(y, dtype=np.int32)
-        n_samples, n_features = X.shape
-
-        if self.random_state is not None:
-            np.random.seed(self.random_state)
-            random.seed(self.random_state)
-
-        self.trees = []
-        for _ in tqdm(range(self.n_estimators)):
-            indices = np.random.choice(n_samples, n_samples, replace=True)
-            X_sample, y_sample = X[indices], y[indices]
-
-            tree = _RandomForestDecisionTree(
-                max_depth=self.max_depth,
-                min_samples_split=self.min_samples_split,
-                max_features=self.max_features
-            )
-            tree.fit(X_sample, y_sample)
-            self.trees.append(tree)
+        for c in self.classes:
+            X_c = X[y == c]
+            for feature in range(n_features):
+                mean = X_c[:, feature].mean()
+                var = X_c[:, feature].var() + self.var_smoothing
+                self.feature_likelihoods[c][feature] = (mean, var)
         return self
+
+    def _gaussian_log_prob(self, x, mean, var):
+        log_prob = -0.5 * np.log(2 * np.pi * var) - ((x - mean) ** 2) / (2 * var)
+        if self.clip_log_prob:
+            log_prob = np.clip(log_prob, self.clip_log_prob[0], self.clip_log_prob[1])
+        return log_prob
+
+    def _predict_one(self, x):
+        if self.normalize and self.feature_mean is not None:
+            x = (x - self.feature_mean) / self.feature_std
+
+        log_probs = {}
+        for c in self.classes:
+            log_prob = np.log(self.class_priors[c])
+            for feature, value in enumerate(x):
+                mean, var = self.feature_likelihoods[c][feature]
+                log_prob += self._gaussian_log_prob(value, mean, var)
+            log_probs[c] = log_prob
+        return max(log_probs.items(), key=lambda item: item[1])[0]
 
     def predict(self, X):
         X = np.asarray(X, dtype=np.float64)
-        if X.shape[0] == 0:
-            return np.array([], dtype=int)
-            
-        all_tree_predictions = []
-        for tree in self.trees:
-            all_tree_predictions.append(tree.predict(X))
-        
-        predictions = np.array(all_tree_predictions)
-
-        final_predictions = np.zeros(X.shape[0], dtype=int)
-        for i in range(X.shape[0]):
-            most_common_class = Counter(predictions[:, i]).most_common(1)
-            if most_common_class:
-                final_predictions[i] = most_common_class[0][0]
-            else:
-                final_predictions[i] = 0 
-        return final_predictions
-
-class _RandomForestDecisionTree(DecisionTreeClassifier):
-    def __init__(self, max_depth=5, min_samples_split=2, max_features=None):
-        super().__init__(max_depth, min_samples_split)
-        self.max_features = max_features
-
-    def _best_split(self, X, y):
-        best_gain = -1.0
-        best_feature = None
-        best_threshold = None
-        
-        n_samples, n_features = X.shape
-        base_entropy = self._entropy(y)
-
-        feature_indices = list(range(n_features))
-        
-        if self.max_features is not None and self.max_features < n_features:
-            if isinstance(self.max_features, float): # If it's a proportion
-                num_features_to_consider = max(1, int(n_features * self.max_features))
-            else: # If it's an integer
-                num_features_to_consider = min(n_features, self.max_features)
-            selected_features = random.sample(feature_indices, num_features_to_consider)
-        else:
-            selected_features = feature_indices 
-        for feature in selected_features: 
-            unique_values = np.unique(X[:, feature])
-            if len(unique_values) < 2:
-                continue
-
-            for i in range(len(unique_values) - 1):
-                threshold = (unique_values[i] + unique_values[i+1]) / 2.0
-                
-                left_indices = X[:, feature] <= threshold
-                right_indices = X[:, feature] > threshold
-                
-                left_y, right_y = y[left_indices], y[right_indices]
-                
-                if len(left_y) == 0 or len(right_y) == 0:
-                    continue
-                
-                gain = base_entropy - (
-                    (len(left_y)/n_samples)*self._entropy(left_y) +
-                    (len(right_y)/n_samples)*self._entropy(right_y)
-                )
-                if gain > best_gain:
-                    best_gain = gain
-                    best_feature = feature
-                    best_threshold = threshold
-        return best_feature, best_threshold, best_gain 
+        return np.array([self._predict_one(x) for x in X])
 
 class PerceptronClassifier:
     def __init__(self, epochs=100, lr=1.0):

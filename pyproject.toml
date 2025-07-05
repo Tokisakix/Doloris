@@ -17,7 +17,8 @@ dependencies = [
     "pandas",
     "tqdm",
     "scikit-learn",
-    "seaborn"
+    "seaborn",
+    "numba"
 ]
 
 [project.scripts]
