@@ -81,7 +81,7 @@ doloris algorithm --cache-path <缓存目录路径> \
 示例命令：
 
 ```bash
-doloris algorithm --label-type binary --model-name random_forest
+doloris algorithm --label-type binary --model-name naive_bayes
 ```
 
 ## 🧠 默认特征说明
