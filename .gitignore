@@ -10,3 +10,6 @@ dist/
 
 # gradio
 .gradio/
+
+# doloris cache
+.doloris/

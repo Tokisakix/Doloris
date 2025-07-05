@@ -1,6 +1,6 @@
 [project]
 name = "doloris"
-version = "0.2.0"
+version = "0.3.0"
 description = "Detection Of Learning Obstacles via Risk-aware Interaction Signals"
 authors = [
     { name = "许睿林", email = "xurlin5@mail2.sysu.edu.cn" },
@@ -24,4 +24,4 @@ dependencies = [
 doloris = "doloris.__main__:main"
 
 [tool.setuptools]
-packages = ["doloris"]
+package-dir = {"doloris" = "doloris"}

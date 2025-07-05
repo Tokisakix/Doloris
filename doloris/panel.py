@@ -7,7 +7,7 @@ import gradio as gr
 import pandas as pd
 from tqdm import tqdm
 
-OULAD_DATA_URL = "https://blog.tokisakix.cn/static/OULAD-data.zip"
+OULAD_DATA_URL = "https://blog.tokisakix.cn/static/.doloris.zip"
 
 class DolorisPanel:
     def __init__(self, cache_path):
@@ -16,7 +16,7 @@ class DolorisPanel:
         self.selected_subjects = None
         self.algorithm = None
         self.cache_path = cache_path
-        self.data_root = os.path.join(self.cache_path, "OULAD-data")
+        self.data_root = cache_path
         self.__init_data()
         return
 
