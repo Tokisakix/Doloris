@@ -8,7 +8,9 @@
 
 **Doloris**（**D**etection **O**f **L**earning **O**bstacles via **R**isk-aware **I**nteraction **S**ignals）是一款用于基于交互信号分析学习障碍的检测系统。它支持用户友好的命令行界面、可视化面板以及灵活的机器学习模型配置，适用于教育行为数据分析与预测任务。
 
-![img](./assets/panel.png)
+![img](./assets/panel_1.png)
+
+![img](./assets/panel_2.png)
 
 ## 🔧 安装方式
 
@@ -68,7 +70,7 @@ doloris algorithm --cache-path <缓存目录路径> \
 * `--model-name`：选择的模型名称，支持如下几种：
 
   * `logistic_regression`
-  * `random_forest`
+  * `naive_bayes`
   * `knn`
   * `svm`
   * `sgd`
@@ -97,3 +99,56 @@ doloris algorithm --label-type binary --model-name random_forest
 * avg\_sum\_clicks\_homepage
 
 你也可以通过 `--feature-cols` 参数自定义特征列表。
+
+## 性能评估指标说明
+
+Doloris 在训练与测试阶段均自动计算以下性能指标：
+
+### 准确率（Accuracy）
+
+$$
+\text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}
+$$
+
+表示模型在所有样本中的总体正确预测比例。
+
+### 精确率（Precision）
+
+对于某一类别 $c$，精确率定义为：
+
+$$
+\text{Precision}_c = \frac{TP_c}{TP_c + FP_c}
+$$
+
+衡量模型预测为该类别时，实际为该类别的比例。
+
+### 召回率（Recall）
+
+$$
+\text{Recall}_c = \frac{TP_c}{TP_c + FN_c}
+$$
+
+衡量模型成功识别出该类别样本的比例。
+
+### F1 分数（F1-score）
+
+F1-score 是精确率与召回率的调和平均：
+
+$$
+\text{F1}_c = \frac{2 \cdot \text{Precision}_c \cdot \text{Recall}_c}{\text{Precision}_c + \text{Recall}_c}
+$$
+
+同时计算宏平均（Macro Average）与加权平均（Weighted Average）：
+
+* 宏平均（Macro）为各类 F1-score 的算术平均：
+
+  $$
+  \text{Macro-F1} = \frac{1}{C} \sum_{c=1}^{C} \text{F1}_c
+  $$
+* 加权平均（Weighted）根据每类样本数量加权：
+
+  $$
+  \text{Weighted-F1} = \frac{1}{N} \sum_{c=1}^{C} n_c \cdot \text{F1}_c
+  $$
+
+其中 $n_c$ 表示第 $c$ 类样本数，$N$ 为总样本数。
