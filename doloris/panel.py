@@ -93,7 +93,7 @@ class DolorisPanel:
 
         return metrics_df, conf_img_path, class_img_path, avg_img_path, logs, "模型训练完成"
 
-    def launch(self, is_share):
+    def launch(self, server_name, server_port, is_share):
         with gr.Blocks(title="Doloris 参数配置面板") as demo:
             gr.Markdown("## Doloris 学业风险预测参数面板")
 
@@ -168,4 +168,8 @@ class DolorisPanel:
                 ]
             )
 
-        demo.launch(share=is_share)
+        demo.launch(
+            server_name=server_name,
+            server_port=server_port,
+            share=is_share,
+        )

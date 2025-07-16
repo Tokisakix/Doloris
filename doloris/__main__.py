@@ -5,7 +5,7 @@ import argparse
 from doloris.panel import DolorisPanel
 from doloris.algorithm import run_doloris_algorithm
 
-VERSION = "1.0.2"
+VERSION = "1.1.0"
 DOLORIS = R"""  ____          _               _      
  |  _ \   ___  | |  ___   _ __ (_) ___ 
  | | | | / _ \ | | / _ \ | '__|| |/ __|
@@ -29,6 +29,18 @@ def argument_parser():
         type=str,
         default=os.path.abspath(".doloris"),
         help="Path to the cached data directory"
+    )
+    panel_parser.add_argument(
+        "--server-name",
+        type=str,
+        default="127.0.0.1",
+        help="Server name or IP address to run the panel"
+    )
+    panel_parser.add_argument(
+        "--server-port",
+        type=int,
+        default=7860,
+        help="Port number to run the panel"
     )
     panel_parser.add_argument(
         "--share",
@@ -90,7 +102,11 @@ def main():
         print(f"Doloris version {VERSION}")
     elif args.command == "panel":
         panel = DolorisPanel(args.cache_path)
-        panel.launch(args.share)
+        panel.launch(
+            args.server_name,
+            args.server_port,
+            args.share,
+        )
     elif args.command == "algorithm":
         run_doloris_algorithm(
             args.cache_path,
