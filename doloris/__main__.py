@@ -5,7 +5,7 @@ import argparse
 from doloris.panel import DolorisPanel
 from doloris.algorithm import run_doloris_algorithm
 
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 DOLORIS = R"""  ____          _               _      
  |  _ \   ___  | |  ___   _ __ (_) ___ 
  | | | | / _ \ | | / _ \ | '__|| |/ __|
