@@ -12,7 +12,7 @@ from doloris.src.data import DataLoader, define_label_binary, define_label_multi
 from doloris.src.model import train_model_with_val, evaluate_model
 from doloris.src.plot import plot_confusion_matrix, plot_classification_report, plot_avg_scores
 
-OULAD_DATA_URL = "https://blog.tokisakix.cn/static/.doloris.zip"
+OULAD_DATA_URL = "https://drive.tokisakix.cn/api/public/dl/iaoY7d9s"
 
 def __init_data(cache_path, data_root):
     os.makedirs(cache_path, exist_ok=True)
